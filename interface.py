@@ -3,6 +3,7 @@ Chat Interface
 '''
 import sys
 import signal
+import network
 from PyQt5.QtGui import QFont, QPalette, QColor, QBrush, QLinearGradient
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, QSize, QRect, Qt
 from PyQt5.QtWidgets import ( QApplication, QLineEdit, QPushButton,
@@ -15,11 +16,13 @@ class MainWindow(QWidget):
     # signals 
     trigger = pyqtSignal(str)
     error_signal = pyqtSignal(str)
+    connect_signal = pyqtSignal(str)
 
      
     def __init__(self):
         super().__init__()
 
+        self.style_colors()
         min_width = 1200
         min_height = 1200
         self.title = "SLAC Chat"
@@ -27,22 +30,54 @@ class MainWindow(QWidget):
         self.setWindowTitle(self.title)
         self.setMinimumSize(QSize(min_width, min_height))
 
-        self.widget_style = " QWidget { border: 2px solid black; color: rgb(47, 36, 36); border-radius:10 }"
         palette = QPalette()
-        #palette.setColor(QPalette.Window, QColor(155, 28, 49))
         gradient = QLinearGradient(0, 0, 0, 300)
-        # Chocolate
-        gradient.setColorAt(1.0, QColor(47, 36, 36))
-        # Stone
-        gradient.setColorAt(0.0, QColor(87, 73, 72))
-        #palette.setColor(QPalette.Background, QColor(249,246,220))
+        gradient.setColorAt(1.0, self.chocolate)
+        gradient.setColorAt(0.0, self.stone)
+        
         palette.setBrush(QPalette.Window, QBrush(gradient))
-        # Stone
-       # palette.setColor(QPalette.Window, QColor(84,73,72))
         self.setPalette(palette)
+        
+        #create an instance of Network Module
+        self.network = network.Network()
+        self.setup_communication(self.network)
 
+        
         self.setupUi()
+        self.setup_signal_slots()
 
+    def setup_communication(self, module):
+        self.connect_signal.connect(self.network.handle_connect)
+
+        #self.push_import.clicked.connect(self.import_data)
+        #self.push_cancel.clicked.connect(self.close_app)
+        #self.push_ok.clicked.connect(self.process_input)        
+    
+    def setup_signal_slots(self):
+        self.connectButton.clicked.connect(self.button_clicked)
+        
+    # Note: the colors bellow have been borrowed from 
+    # https://identity.stanford.edu/color.html
+    def style_colors(self):
+        self.stone = QColor(84, 73, 72)
+        self.light_sandstone = QColor(249, 246, 239)
+        self.light_sage = QColor(199, 209, 197)
+        self.chocolate = QColor(47, 36, 36)
+    
+    # expects widget_type => string, ex: 'QLabel', 'QWidget' ...
+    # color, background_color => string, ex: 'white', 'rgb(255, 255, 255)', 'QColor(255, 255, 255)'
+    # border_radius => number 
+    # font_family => string, ex: 'Courier New'
+    # font_size = number
+    def set_style(self, widget_type, color, background_color, border_radius, font_family, font_size):
+        return "%s {color: %s; background-color: %s; border-radius: %s; font-family: %s; font-size: %d px}" % (
+            widget_type, color, background_color, border_radius, font_family, font_size)
+
+    #def set_style(self, font_size):
+    #    return " QLabel {font_size: %1 }" % (font_size)
+    
+    def set_palette(self):
+        pass
     # defines the main area where the messages
     # will be exchanged or displayed
     def setup_chat_area(self):
@@ -55,17 +90,15 @@ class MainWindow(QWidget):
 
         palette = QPalette()
         gradient = QLinearGradient(0, 0, 0, 300)
-        # Light Sandstone
-        gradient.setColorAt(0.0, QColor(249, 246, 239))
-        # Light Sage
-        gradient.setColorAt(1.0, QColor(199, 209, 197))
+        gradient.setColorAt(0.0, self.light_sandstone)
+        gradient.setColorAt(1.0, self.light_sage)
  
         palette.setBrush(QPalette.Window, QBrush(gradient))
         self.scrollArea.setPalette(palette)
 
         self.scrollArea.setFont(QFont('Courier New', 12))
 
-        self.scrollArea.setStyleSheet(self.widget_style)
+       # self.scrollArea.setStyleSheet(self.widget_style)
 
         # the widget with messages can have a small opacity baground color
         # one color for client, one for server
@@ -77,7 +110,7 @@ class MainWindow(QWidget):
         #label = QLabel('this is a message')
         #self.scrollAreaLayout.addWidget(label)
         #self.scrollAreaLayout.addWidget()
-        widget.setStyleSheet(self.widget_style)
+       # widget.setStyleSheet(self.widget_style)
         #self.scrollAreaLayout.addStretch(1)
 
     #combo box that will hold the list of
@@ -89,7 +122,7 @@ class MainWindow(QWidget):
         self.comboBox.setStyleSheet(""" 
             QWidget {
                 border: 1px solid black;
-                color: rgb(47, 36, 36);
+                color: QColor(47, 36, 36);
                 background-color: rgb(249, 246, 239);
                 border-radius:10;
                 } 
@@ -104,14 +137,14 @@ class MainWindow(QWidget):
         self.connectButton.setStyleSheet(""" 
             QWidget {
                 border: 4px solid black;
-                color: rgb(47, 36, 36);
+                color: QColor(47, 36, 36);
                 background-color: rgb(182, 177, 169);
                 border-radius:10;
                 min-width: 10em
                 } 
             """)
 
-        self.connectButton.clicked.connect(self.button_clicked)
+       # self.connectButton.clicked.connect(self.button_clicked)
     
     def setup_username_line_edit(self):
         self.usernameLineEdit = QLineEdit(self)
@@ -131,18 +164,20 @@ class MainWindow(QWidget):
 
     def setup_labels(self):
         self.username_label = QLabel('Username: ')
-        self.username_label.setFont(QFont('Courier New', 12))
-        self.username_label.setStyleSheet(""" 
-            QLabel{ 
-                color: white;
-                qproperty-alignment: AlignVCenter;
-                font-family: Courier New;
-                color: white
-                } 
-            """)
+        #self.username_label.setFont(QFont('Courier New', 12))
+       # self.username_label.setStyleSheet(""" 
+        #    QLabel { 
+         #       color: white;
+         #       qproperty-alignment: AlignVCenter;
+         #       font-family: Courier New
+         #       }
+         #   """ )
 
+        self.username_label.setStyleSheet(self.set_style('QLabel', 'white', None, None, '\'Curier New\'', 14))
+        print(self.set_style('QLabel', 'white', None, None, '\'Curier New\'', 14))
+   
         self.status_label = QLabel('Status.........................')
-        self.status_label.setFont(QFont('Courier New', 12))
+        #self.status_label.setFont(QFont('Courier New', 12))
         self.top_label = QLabel(self)
         self.middle_label = QLabel(self)
         self.buttom_label = QLabel(self)
@@ -157,9 +192,9 @@ class MainWindow(QWidget):
         self.status_label.setStyleSheet("""
             QLabel {
                 qproperty-alignment: AlignJustify;
-                font-family: Courier New;
+                font-family:'Courier New';
                 color: white;
-                font: bold 16em
+                font: bold 30em
             }""")
 
     def setup_layout(self):
@@ -197,6 +232,17 @@ class MainWindow(QWidget):
 
     def button_clicked(self):
         self.trigger.emit('REGISTER')
+        self.connect_signal.emit('Hugo')
+        self.connectButton.setText('Disconenct')
+        self.connectButton.setStyleSheet(""" 
+            QWidget {
+                border: 4px solid black;
+                color: rgb(47, 36, 36);
+                background-color: rgb(0, 155, 118);
+                border-radius:10;
+                min-width: 10em
+                } 
+            """)
         
     def connect_to_server(self, client):
         print('Is trying to connect...')

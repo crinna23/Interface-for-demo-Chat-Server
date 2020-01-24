@@ -12,8 +12,8 @@ class Client():
     
     # should i have a client  as param here? to create a client per name?
     def __init__(self):
-        self.ip_addr = ip_addr
-        self.port = port
+        #self.ip_addr = ip_addr
+        #self.port = port
 
     def connect_to_server(self, ip_addr = HOST, port = PORT):
         self.CLIENT.connect((self.ip_addr, self.port ))
