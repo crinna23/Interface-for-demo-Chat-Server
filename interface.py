@@ -3,25 +3,27 @@ Chat Interface
 
 01/23/2020
 cristina sewell
+
+ToDo: setObjectName??
 '''
 import sys
 import signal
-import network
 from PyQt5.QtGui import QFont, QPalette, QColor, QBrush, QLinearGradient
-from PyQt5.QtCore import pyqtSignal, pyqtSlot, QSize, QRect, Qt
-from PyQt5.QtWidgets import ( QApplication, QLineEdit, QPushButton,
+from PyQt5.QtCore import pyqtSignal, pyqtSlot, QSize, QRect, Qt 
+from PyQt5.QtWidgets import (QApplication, QLineEdit, QPushButton,
     QWidget, QGridLayout, QVBoxLayout, QStackedLayout, QStyle, QLabel, QComboBox, 
-    QScrollArea, QMessageBox, QApplication, QFrame, QSpacerItem, QSizePolicy)
+    QScrollArea, QMessageBox, QFrame, QSpacerItem, QSizePolicy, QTextEdit)
+import network
 
+class MainWindow(QWidget):     
+     # signals 
 
-class MainWindow(QWidget):
-    
-    # signals 
-    trigger = pyqtSignal(str)
     error_signal = pyqtSignal(str)
     connect_signal = pyqtSignal(str)
+    text_changed_signal = pyqtSignal(str, str)
 
-     
+    user_input = ""
+
     def __init__(self):
         super().__init__()
 
@@ -51,13 +53,13 @@ class MainWindow(QWidget):
         
         #create an instance of Network Module
         self.network = network.Network()
-        self.setup_communication(self.network)
+     #   self.setup_communication(self.network)
 
         self.setupUi()
         self.setup_signal_slots()
 
-    def setup_communication(self, module):
-        self.connect_signal.connect(self.network.handle_connect)
+   # def setup_communication(self, module):
+   #     self.connect_signal.connect(self.network.handle_connect)
 
         #self.push_import.clicked.connect(self.import_data)
         #self.push_cancel.clicked.connect(self.close_app)
@@ -65,6 +67,7 @@ class MainWindow(QWidget):
     
     def setup_signal_slots(self):
         self.connect_button.clicked.connect(self.button_clicked)
+        self.username_line_edit.textChanged.connect(self.check_username_text)
         
     # Note: the colors bellow have been borrowed from 
     # https://identity.stanford.edu/color.html
@@ -93,7 +96,6 @@ class MainWindow(QWidget):
         self.scrollArea.setPalette(palette)
 
         self.scrollArea.setFont(QFont('Courier New', 12))
-
         
         # the widget with messages can have a small opacity baground color
         # one color for client, one for server
@@ -146,6 +148,7 @@ class MainWindow(QWidget):
         self.connect_button.setText('Connect')
         self.connect_button.setFont(QFont('Courier New', 12))
         self.connect_button.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Preferred)
+        self.connect_button.setEnabled(False)
 
         self.connect_button.setStyleSheet(""" 
             QWidget {
@@ -156,7 +159,9 @@ class MainWindow(QWidget):
                 min-width: 10em
                 } 
             """)
-
+        
+       # self.trigger.connect(self.connect_to_server)
+        self.connect_signal.connect(self.network.handle_username_input)
        # self.connectButton.clicked.connect(self.button_clicked)
     
     def setup_username_line_edit(self):
@@ -175,6 +180,20 @@ class MainWindow(QWidget):
                 font: bold
                 } 
             """)
+
+        self.user_input = self.username_line_edit.text()
+        # connecting to 'check_username_text' anytime somethins is added or removed 
+        # from the QLineEdit
+       
+    
+    # enables/dissables the 'connect' button and updates the 'user_inpu' with current info
+    def check_username_text(self):
+        self.connect_button.setEnabled(True)
+        if self.user_input != self.username_line_edit.text():
+            self.user_input = self.username_line_edit.text()
+       # dissable the 'connect' button if no imput in username edit line
+        if self.username_line_edit.text() == "":
+            self.connect_button.setEnabled(False)
 
     def setup_labels(self):
         # username:
@@ -225,7 +244,7 @@ class MainWindow(QWidget):
         self.setup_username_line_edit()
         self.setup_layout()
 
-        self.trigger.connect(self.connect_to_server)
+   
 
 
    # @pyqtSlot(int, name = 'name')
@@ -233,8 +252,7 @@ class MainWindow(QWidget):
         pass
 
     def button_clicked(self):
-        self.trigger.emit('REGISTER')
-        self.connect_signal.emit('Hugo')
+        self.connect_signal.emit(self.user_input)
         self.connect_button.setText('Disconenct')
         self.connect_button.setStyleSheet(""" 
             QWidget {

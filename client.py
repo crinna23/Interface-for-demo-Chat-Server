@@ -10,13 +10,16 @@ class Client():
     
     CLIENT = socket(AF_INET, SOCK_STREAM)
     
+    data_received = ""
     # should i have a client  as param here? to create a client per name?
     def __init__(self):
+        pass
         #self.ip_addr = ip_addr
         #self.port = port
+        
 
     def connect_to_server(self, ip_addr = HOST, port = PORT):
-        self.CLIENT.connect((self.ip_addr, self.port ))
+        self.CLIENT.connect(self.ADDR)
         return "The client has successfully connected on port == %s" %(self.HOST)
 
     def send_data(self, message):
@@ -24,12 +27,13 @@ class Client():
             #register - see what type of data you need to send?
             message = message.encode("utf-8")
             self.CLIENT.send(message)
-            receive = self.CLIENT.recv(self.BUFSIZ)
-            receive = receive.decode("utf-8")
+            self.data_received = self.CLIENT.recv(self.BUFSIZ)
+            self.data_received = self.data_received.decode("utf-8")
             
             # while received < expected:???
         except CLIENT.error as err:
             return str(err)
+        print(self.data_received)
 
     def close(self):
         self.CLIENT.shutdown(SHUT_WR)
