@@ -1,5 +1,8 @@
 '''
 Chat Interface
+
+01/23/2020
+cristina sewell
 '''
 import sys
 import signal
@@ -22,7 +25,6 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.style_colors()
         min_width = 600
         min_height = 1000
         self.title = "SLAC Chat"
@@ -33,7 +35,11 @@ class MainWindow(QWidget):
         
         self.centralwidget = QWidget(self)
         self.gridLayoutWidget = QWidget(self.centralwidget)
+
         self.gridLayoutWidget.setGeometry(QRect(0, 0, 600, 300))
+
+        
+        self.style_colors()
 
         palette = QPalette()
         gradient = QLinearGradient(0, 0, 0, 300)
@@ -58,7 +64,7 @@ class MainWindow(QWidget):
         #self.push_ok.clicked.connect(self.process_input)        
     
     def setup_signal_slots(self):
-        self.connectButton.clicked.connect(self.button_clicked)
+        self.connect_button.clicked.connect(self.button_clicked)
         
     # Note: the colors bellow have been borrowed from 
     # https://identity.stanford.edu/color.html
@@ -67,21 +73,13 @@ class MainWindow(QWidget):
         self.light_sandstone = QColor(249, 246, 239)
         self.light_sage = QColor(199, 209, 197)
         self.chocolate = QColor(47, 36, 36)
-    
-    # expects widget_type => string, ex: 'QLabel', 'QWidget' ...
-    # color, background_color => string, ex: 'white', 'rgb(255, 255, 255)', 'QColor(255, 255, 255)'
-    # border_radius => number 
-    # font_family => string, ex: 'Courier New'
-    # font_size = number
-    def set_style(self, widget_type, color, background_color, border_radius, font_family, font_size):
-        return "%s {color: %s; background-color: %s; border-radius: %s; font-family: %s; font-size: %d px}" % (
-            widget_type, color, background_color, border_radius, font_family, font_size)
-
+        self.lagunita = QColor(0, 124, 146)
+        self.teal = QColor(0, 80, 92)
 
     # defines the main area where the messages
     # will be exchanged or displayed
     def setup_chat_area(self):
-        self.scrollArea = QScrollArea(self)
+        self.scrollArea = QScrollArea(self.gridLayoutWidget)
         self.scrollArea.setContentsMargins(2, 2, 2, 2)
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
@@ -110,7 +108,7 @@ class MainWindow(QWidget):
 
         for i in range(30):
             i = QLabel('start------------------------------------------------------------end')
-            i.setWordWrap(True)
+         #   i.setWordWrap(True)
            # i.setMinimumWidth(1)
             l = self.scrollAreaLayout.layout()
             l.insertWidget(l.count() - 1, i)
@@ -125,14 +123,14 @@ class MainWindow(QWidget):
        # widget.setStyleSheet(self.widget_style)
         #self.scrollAreaLayout.addStretch(1)
 
-    #combo box that will hold the list of
+    #combo box that holds the list of
     #clients that are currently participating
     def setup_combobox(self):
-        self.comboBox = QComboBox()
-        self.comboBox.setFont(QFont('Courier New', 12))
-        self.comboBox.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Preferred)
+        self.combo_box = QComboBox(self.gridLayoutWidget)
+        self.combo_box.setFont(QFont('Courier New', 12))
+        self.combo_box.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Preferred)
 
-        self.comboBox.setStyleSheet(""" 
+        self.combo_box.setStyleSheet(""" 
             QWidget {
                 border: 1px solid black;
                 color: QColor(47, 36, 36);
@@ -144,11 +142,12 @@ class MainWindow(QWidget):
     
     # push button that will allow the user to connect or disconnect
     def setup_button(self):
-        self.connectButton = QPushButton('Connect')
-        self.connectButton.setFont(QFont('Courier New', 12))
-        self.connectButton.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Preferred)
+        self.connect_button = QPushButton(self.gridLayoutWidget)
+        self.connect_button.setText('Connect')
+        self.connect_button.setFont(QFont('Courier New', 12))
+        self.connect_button.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Preferred)
 
-        self.connectButton.setStyleSheet(""" 
+        self.connect_button.setStyleSheet(""" 
             QWidget {
                 border: 4px solid black;
                 color: QColor(47, 36, 36);
@@ -161,73 +160,60 @@ class MainWindow(QWidget):
        # self.connectButton.clicked.connect(self.button_clicked)
     
     def setup_username_line_edit(self):
-        self.usernameLineEdit = QLineEdit(self)
-        self.usernameLineEdit.setEnabled(True)
-        self.usernameLineEdit.setFont(QFont('Courier New', 12))
-        self.usernameLineEdit.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Preferred)
+        self.username_line_edit = QLineEdit(self.gridLayoutWidget)
+        self.username_line_edit.setEnabled(True)
+        self.username_line_edit.setFont(QFont('Courier New', 12))
+        self.username_line_edit.setStyleSheet(""" QLabel { border-radius:10} """)
+        self.username_line_edit.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Preferred)
 
-        self.usernameLineEdit.setStyleSheet(""" 
+        self.username_line_edit.setStyleSheet(""" 
             QWidget {
-                border: 1px solid black;
-                color: rgb(47, 36, 36);
+                border: 2px solid black;
+                color: rgb(0, 80, 92);
                 background-color: rgb(249, 246, 239);
                 border-radius:10;
-                min-width: 10em
+                font: bold
                 } 
             """)
 
-
     def setup_labels(self):
-        self.username_label = QLabel('Username: ')
-        #self.username_label.setFont(QFont('Courier New', 12))
-       # self.username_label.setStyleSheet(""" 
-        #    QLabel { 
-         #       color: white;
-         #       qproperty-alignment: AlignVCenter;
-         #       font-family: Courier New
-         #       }
-         #   """ )
-
-        self.username_label.setStyleSheet(self.set_style('QLabel', 'white', None, None, '\'Curier New\'', 14))
-        print(self.set_style('QLabel', 'white', None, None, '\'Curier New\'', 14))
-   
-        self.status_label = QLabel('Status.........................')
-        #self.status_label.setFont(QFont('Courier New', 12))
-        self.top_label = QLabel(self)
-        self.middle_label = QLabel(self)
-        self.buttom_label = QLabel(self)
-        self.combobox_label = QLabel("Send message to: ")
+        # username:
+        self.username_label = QLabel(self.gridLayoutWidget)
+        self.username_label.setText("username:")
+        self.username_label.setAlignment(Qt.AlignCenter)
+        self.username_label.setFont(QFont('Courier New', 12))
+        self.username_label.setStyleSheet(""" QLabel{ color: white} """)
+ 
+        # connection status
+        self.status_label = QLabel('Status..')
+        self.status_label.setAlignment(Qt.AlignCenter)
+        self.status_label.setFont(QFont('Courier New', 12))
+        self.status_label.setStyleSheet(""" QLabel{ color: white } """)
+        
+        # message to:
+        self.combobox_label = QLabel("message to: ")
         self.combobox_label.setFont(QFont('Courier New', 12))
-        self.combobox_label.setStyleSheet(""" QLabel{ color: white } """)
+        self.combobox_label.setStyleSheet(""" QLabel{ color: white; border-radius: 7} """)
 
-        self.top_label.setFrameShape(QFrame.NoFrame)
-        self.middle_label.setFrameShape(QFrame.NoFrame)
-        self.buttom_label.setFrameShape(QFrame.NoFrame)
-
-        self.status_label.setStyleSheet("""
-            QLabel {
-                qproperty-alignment: AlignJustify;
-                font-family:'Courier New';
-                color: white;
-                font: bold 30em
-            }""")
+        self.status_label.setStyleSheet(""" QLabel { color: white }""")
 
     def setup_layout(self):
-        self.gridLayout = QGridLayout(self)
+        self.gridLayout = QGridLayout(self.gridLayoutWidget)
+        self.gridLayout.setContentsMargins(2, 2, 2, 2)
+        self.gridLayout.setHorizontalSpacing(24)
+        self.gridLayout.setVerticalSpacing(7)
+        self.gridLayout.setRowStretch(0, 1)
+        self.gridLayout.setRowStretch(1, 1)
+        self.gridLayout.setRowStretch(6, 8)
+        self.gridLayout.setRowStretch(4, 2)
 
-        self.gridLayout.addWidget(self.top_label, 0, 0, 1, -1)
-        self.gridLayout.addWidget(self.middle_label, 4, 0, 1, -1)
-        self.gridLayout.addWidget(self.buttom_label, 8, 0, 1, -1)
-        self.gridLayout.addWidget(self.username_label, 1, 0)
-        self.gridLayout.addWidget(self.usernameLineEdit, 1, 1)
-        self.gridLayout.addWidget(self.combobox_label, 3, 0)
-        self.gridLayout.addWidget(self.comboBox, 3, 1)
-        self.gridLayout.addWidget(self.status_label, 6, 0, 1, -1)
-        self.gridLayout.addWidget(self.connectButton, 1, 2)
-        self.gridLayout.addWidget(self.scrollArea, 7, 0, 1, -1)
-       
-        #self.gridLayout.setColumnStretch(1, 1)
-        #self.gridLayout.setColumnStretch(2, 1)
+        self.gridLayout.addWidget(self.username_label, 1, 0, 1, 1)
+        self.gridLayout.addWidget(self.username_line_edit, 1, 1, 1, 1)
+        self.gridLayout.addWidget(self.combobox_label, 3, 0, 1, 1)
+        self.gridLayout.addWidget(self.combo_box, 3, 1, 1, 1)
+        self.gridLayout.addWidget(self.status_label, 4, 0, 1, -1)
+        self.gridLayout.addWidget(self.connect_button, 1, 2, 1, 1)
+        self.gridLayout.addWidget(self.scrollArea, 6, 0, 1, -1)
 
         self.setLayout(self.gridLayout)
 
@@ -249,14 +235,13 @@ class MainWindow(QWidget):
     def button_clicked(self):
         self.trigger.emit('REGISTER')
         self.connect_signal.emit('Hugo')
-        self.connectButton.setText('Disconenct')
-        self.connectButton.setStyleSheet(""" 
+        self.connect_button.setText('Disconenct')
+        self.connect_button.setStyleSheet(""" 
             QWidget {
                 border: 4px solid black;
                 color: rgb(47, 36, 36);
                 background-color: rgb(0, 155, 118);
-                border-radius:10;
-                min-width: 10em
+                border-radius:10
                 } 
             """)
         
@@ -282,13 +267,7 @@ class MainWindow(QWidget):
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, MainWindow.sigint_handler)
     app = QApplication(sys.argv)
-    #QTimer::singleShot(1000, &app, sigint_handler)
-    #timer = QTimer()
-   # timer.start(500)
-   # timer.timeout.connect(lambda: None)
-    window = MainWindow()
-    
+    window = MainWindow() 
     window.show()
-
     sys.exit(app.exec_())
         
