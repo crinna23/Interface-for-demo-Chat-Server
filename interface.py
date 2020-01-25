@@ -23,12 +23,17 @@ class MainWindow(QWidget):
         super().__init__()
 
         self.style_colors()
-        min_width = 1200
-        min_height = 1200
+        min_width = 600
+        min_height = 1000
         self.title = "SLAC Chat"
-    
+        self.resize(min_width, min_height)
         self.setWindowTitle(self.title)
-        self.setMinimumSize(QSize(min_width, min_height))
+
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        
+        self.centralwidget = QWidget(self)
+        self.gridLayoutWidget = QWidget(self.centralwidget)
+        self.gridLayoutWidget.setGeometry(QRect(0, 0, 600, 300))
 
         palette = QPalette()
         gradient = QLinearGradient(0, 0, 0, 300)
@@ -42,7 +47,6 @@ class MainWindow(QWidget):
         self.network = network.Network()
         self.setup_communication(self.network)
 
-        
         self.setupUi()
         self.setup_signal_slots()
 
@@ -73,17 +77,12 @@ class MainWindow(QWidget):
         return "%s {color: %s; background-color: %s; border-radius: %s; font-family: %s; font-size: %d px}" % (
             widget_type, color, background_color, border_radius, font_family, font_size)
 
-    #def set_style(self, font_size):
-    #    return " QLabel {font_size: %1 }" % (font_size)
-    
-    def set_palette(self):
-        pass
+
     # defines the main area where the messages
     # will be exchanged or displayed
     def setup_chat_area(self):
         self.scrollArea = QScrollArea(self)
         self.scrollArea.setContentsMargins(2, 2, 2, 2)
-       # self.scrollArea.setMaximumWidth(650)
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
         self.scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
@@ -92,23 +91,36 @@ class MainWindow(QWidget):
         gradient = QLinearGradient(0, 0, 0, 300)
         gradient.setColorAt(0.0, self.light_sandstone)
         gradient.setColorAt(1.0, self.light_sage)
- 
         palette.setBrush(QPalette.Window, QBrush(gradient))
         self.scrollArea.setPalette(palette)
 
         self.scrollArea.setFont(QFont('Courier New', 12))
 
-       # self.scrollArea.setStyleSheet(self.widget_style)
-
+        
         # the widget with messages can have a small opacity baground color
         # one color for client, one for server
 
         widget = QWidget()
         self.scrollArea.setWidget(widget)
         self.scrollAreaLayout = QVBoxLayout(widget)
+        self.scrollAreaLayout.setAlignment(Qt.AlignTop)
+      
+        self.scrollArea.setWidgetResizable(True)
+        self.scrollArea.verticalScrollBar().setSingleStep(20)
+
+        for i in range(30):
+            i = QLabel('start------------------------------------------------------------end')
+            i.setWordWrap(True)
+           # i.setMinimumWidth(1)
+            l = self.scrollAreaLayout.layout()
+            l.insertWidget(l.count() - 1, i)
+
+
+        
+
         # maybe add a message widget here???
-        #label = QLabel('this is a message')
-        #self.scrollAreaLayout.addWidget(label)
+        label = QLabel('this is a message')
+        self.scrollAreaLayout.addWidget(label)
         #self.scrollAreaLayout.addWidget()
        # widget.setStyleSheet(self.widget_style)
         #self.scrollAreaLayout.addStretch(1)
@@ -118,6 +130,7 @@ class MainWindow(QWidget):
     def setup_combobox(self):
         self.comboBox = QComboBox()
         self.comboBox.setFont(QFont('Courier New', 12))
+        self.comboBox.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Preferred)
 
         self.comboBox.setStyleSheet(""" 
             QWidget {
@@ -133,6 +146,7 @@ class MainWindow(QWidget):
     def setup_button(self):
         self.connectButton = QPushButton('Connect')
         self.connectButton.setFont(QFont('Courier New', 12))
+        self.connectButton.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Preferred)
 
         self.connectButton.setStyleSheet(""" 
             QWidget {
@@ -150,6 +164,7 @@ class MainWindow(QWidget):
         self.usernameLineEdit = QLineEdit(self)
         self.usernameLineEdit.setEnabled(True)
         self.usernameLineEdit.setFont(QFont('Courier New', 12))
+        self.usernameLineEdit.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Preferred)
 
         self.usernameLineEdit.setStyleSheet(""" 
             QWidget {
@@ -211,7 +226,8 @@ class MainWindow(QWidget):
         self.gridLayout.addWidget(self.connectButton, 1, 2)
         self.gridLayout.addWidget(self.scrollArea, 7, 0, 1, -1)
        
-        self.gridLayout.setColumnStretch(1, 1)
+        #self.gridLayout.setColumnStretch(1, 1)
+        #self.gridLayout.setColumnStretch(2, 1)
 
         self.setLayout(self.gridLayout)
 
