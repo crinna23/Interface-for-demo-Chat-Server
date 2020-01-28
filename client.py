@@ -1,4 +1,9 @@
-# client module
+'''
+Client Module
+
+01/23/2020
+cristina sewell
+'''
 from socket import AF_INET, SOCK_STREAM, socket
 
 class Client():
@@ -7,38 +12,76 @@ class Client():
     PORT = 33002
     BUFSIZ = 2048
     ADDR = (HOST, PORT)
-    
-    CLIENT = socket(AF_INET, SOCK_STREAM)
-    
+    REGISTER = '{REGISTER}'
+    QUIT = '{QUIT}'
+
     data_received = ""
-    # should i have a client  as param here? to create a client per name?
+    clients = ""
+    hello_msg = ""
+
+    CLIENT = socket(AF_INET, SOCK_STREAM)
+
     def __init__(self):
         pass
-        #self.ip_addr = ip_addr
-        #self.port = port
+
+
+    def connect_to_server(self, username):
+        try:
+            self.CLIENT.connect(self.ADDR)
+            # provide the server with an username
+            register_msg = self.REGISTER + username
+            register_msg = register_msg.encode('utf-8')
+
+            # after we register we should expect some
+            # messages comming back from the server
+            server_resp = self.send_dataaa(register_msg)
+            return server_resp
+        except ConnectionRefusedError:
+            print("Could not make connection, the target might not be online.")
+        except OSError:
+            print("No request or received allowed.")
         
 
-    def connect_to_server(self, ip_addr = HOST, port = PORT):
-        self.CLIENT.connect(self.ADDR)
-        return "The client has successfully connected on port == %s" %(self.HOST)
 
-    def send_data(self, message):
-        try:
-            #register - see what type of data you need to send?
-            message = message.encode("utf-8")
-            self.CLIENT.send(message)
-            self.data_received = self.CLIENT.recv(self.BUFSIZ)
-            self.data_received = self.data_received.decode("utf-8")
-            
-            # while received < expected:???
-        except CLIENT.error as err:
-            return str(err)
-        print(self.data_received)
+    def send_dataaa(self, msg):
+        full_data = ""
+        is_end_message = False
+        while not is_end_message:
+            print('first loop - sending message')
+            self.CLIENT.send(msg)
+            try:
+                while True:
+                    data = self.CLIENT.recv(self.BUFSIZ)
+                    print('receiving data - second loop')
+                    full_data += data.decode('utf-8')
+
+                    print('full data: {}'.format(data.decode('utf-8')))
+                    temp_data = data.decode("utf-8")
+                    if '{CLIENTS}' in temp_data:
+                        #is_end_message = True
+                        # empty the message
+                        #full_data = ""
+                        self.clients = temp_data.split("}")[1]
+                        self.set_clients(self.clients)
+                        #handle_combobox_selection(clients)
+                        print('clients msg: {}'.format(temp_data))
+                        #break
+                    if '{MSG}' in temp_data:
+                        print("broadcast msg: {}".format(temp_data))
+                    if '{MSG}' and '{CLIENTS}' in temp_data:
+                        is_end_message = True
+                        break
+            except Exception as err:
+                print('Some error ', str(err))
+                #self.CLIENT.close()
+        return full_data
+
+    #getter - gets the current active clients in the chat
+    def get_clients(self):
+        return self.clients
+
+    def set_clients(self, str_clients):
+        self.clients = str_clients
 
     def close(self):
-        self.CLIENT.shutdown(SHUT_WR)
         self.CLIENT.close()
-
-    def create_client(self):
-        client = Client()
-        return client
