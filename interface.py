@@ -76,7 +76,8 @@ class MainWindow(QWidget):
         self.network = network.Network()
         
         #create a QProcess where the server will run
-        self.server_process = QProcess()
+        #self.server_process = QProcess()
+        #self.server_process.setProcessChannelMode(QProcess.MergedChannels)
 
         # define attributes here to be part of the __init__
         self.scroll_area = QScrollArea(self.grid_layout_widget)
@@ -394,16 +395,19 @@ class MainWindow(QWidget):
         # add more cleanup if necessary
         try:
             print('terminating server process')
-            self.server_process.waitForFinished()
-            self.server_process.terminate()
+            #self.server_process.waitForFinished()
+            #self.server_process.terminate()
         except:
             print('problems closing the server process')
-            self.server_process.kill()
+            #self.server_process.kill()
 
-    def run_server_process(self, host = '127.0.0.1', port = 33002):
-        process  = "python server.py --host 127.0.0.1 --port 33002"
-        self.server_process.start(process)
-        self.server_process.waitForStarted()
+   # def run_server_process(self, host = '127.0.0.1', port = 33002):
+    #    process  = "python server.py --host 127.0.0.1 --port 33002"
+     #   self.server_process.start(process)
+      #  self.server_process.waitForStarted()
+        
+       # process_stdout = str(self.server_process.readAll())
+       # print(process_stdout)
 '''
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal.SIG_DFL)
