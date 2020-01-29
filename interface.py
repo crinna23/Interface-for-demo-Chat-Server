@@ -10,11 +10,12 @@ import signal
 import os
 from enum import Enum
 from PyQt5.QtGui import QFont, QPalette, QColor, QBrush, QLinearGradient
-from PyQt5.QtCore import pyqtSignal, QRect, Qt, QProcess
+from PyQt5.QtCore import pyqtSignal, QRect, Qt, QProcess, QThread
 from PyQt5.QtWidgets import (QApplication, QLineEdit, QPushButton,
                              QWidget, QGridLayout, QVBoxLayout, QLabel,
                              QComboBox, QScrollArea, QSizePolicy)
 import network
+#import client
 #import serverdialog
 #import server
 # supporting the status loggin function 
@@ -43,8 +44,9 @@ class MainWindow(QWidget):
     error_signal = pyqtSignal(str)
     connect_signal = pyqtSignal(str)
     text_changed_signal = pyqtSignal(str, str)
-    send_message_signal = pyqtSignal(str)
+    send_message_signal = pyqtSignal(str, str)
     disconnect_signal = pyqtSignal(str)
+    conn_settings_signal = pyqtSignal(str, int)
 
     user_username = ""
     user_message = ""
@@ -74,6 +76,7 @@ class MainWindow(QWidget):
 
         #create an instance of Network Module
         self.network = network.Network()
+       # self.client = client.Client() 
         
         #create a QProcess where the server will run
         #self.server_process = QProcess()
@@ -94,6 +97,11 @@ class MainWindow(QWidget):
         self.setup_ui()
         self.setup_signal_slots()
 
+    def set_connection_settings(self, addr, port):
+        print('port {}'.format(port))
+        print('addr {}'.format(addr))
+        self.conn_settings_signal.emit(addr, port)
+        
     #setup multiple components of the app ui
     def setup_ui(self):
         self.setup_chat_area()
@@ -130,10 +138,10 @@ class MainWindow(QWidget):
 
         self.scroll_area.setFont(QFont('Courier New', 12))
 
-        widget = QWidget()
-        self.scroll_area.setWidget(widget)
-        scroll_area_layout = QVBoxLayout(widget)
-        scroll_area_layout.setAlignment(Qt.AlignTop)
+        self.widget = QWidget()
+        self.scroll_area.setWidget(self.widget)
+        self.scroll_area_layout = QVBoxLayout(self.widget)
+        self.scroll_area_layout.setAlignment(Qt.AlignTop)
 
         self.scroll_area.setWidgetResizable(True)
 
@@ -164,7 +172,7 @@ class MainWindow(QWidget):
                 } 
             """)
         #self.combo_box.addItem('username1')
-        #self.combo_box.addItem('username2')
+        self.combo_box.addItem('ALL-Broadcast')
 
     # push button that will allow the user to connect or disconnect
     # state: 1 - connected; state:0 - not connected 
@@ -273,6 +281,7 @@ class MainWindow(QWidget):
             """)
 
         self.send_message_signal.connect(self.network.handle_message_input)
+        self.conn_settings_signal.connect(self.network.connection_settings)
 
     # arrange and add the components on the grid_layout
     def setup_layout(self):
@@ -304,6 +313,16 @@ class MainWindow(QWidget):
         self.send_button.clicked.connect(self.send_button_clicked)
         self.network.send_clients_signal.connect(self.update_combobox)
         self.network.send_clients_signal.connect(self.update_connect_btn)
+        self.network.display_msg_signal.connect(self.display_message)
+       # self.client.start_thread_signal.connect(self.handle_recv_thread)
+       
+    def display_message(self, message):
+        self.scroll_area_layout.insertWidget(0, QLabel(message))
+      #  l = self.scroll_area.layout()
+       # l.insertWidget(0, QLabel(message))
+        
+           # l.insertWidget(l.count() - 1, i)
+       # self.scroll_area.addWidget(QLabel(message))
 
     def connect_clicked(self):
         # this is not a very good practice here...
@@ -323,7 +342,8 @@ class MainWindow(QWidget):
         if self.get_current_users() <= 0:
             self.log_status('There are no active users, you cannot send a message!', Status.WARNING)
         else:
-            self.send_message_signal.emit(self.user_message)
+            current_user = str(self.combo_box.currentText())
+            self.send_message_signal.emit(self.user_message, current_user)
             self.user_message = ""
             self.message_line_edit.clear()
         self.message_line_edit.clear()
@@ -374,7 +394,20 @@ class MainWindow(QWidget):
         elif not is_connected:
             self.log_status("Not Connected", Status.WARNING)
             self.setup_connect_button(False)
-            
+    
+  #  def handle_recv_thread(self):
+    #Move recv_message into a separate thread, 
+    #so it does not block us from doing other stuff while waiting for messages
+    #create the main thread client = Client()           
+    ##client = Client()
+    #    print('in the thread function')
+        # create a thread
+    #    recv_thread = QThread()
+        # now client owned by recv_thread:
+    #    self.client.moveToThread(recv_thread)
+    #    recv_thread.started.connect(self.client.recv_message)
+    #    recv_thread.start()
+     
         
     # this signal handler can be implemented in place of the SIG_DFL
     # to allo for more control when application is closed using Ctrl+C
@@ -393,12 +426,12 @@ class MainWindow(QWidget):
         # close the client here
         self.network.handle_disconnect()
         # add more cleanup if necessary
-        try:
-            print('terminating server process')
+       # try:
+       #     print('terminating server process')
             #self.server_process.waitForFinished()
             #self.server_process.terminate()
-        except:
-            print('problems closing the server process')
+       # except:
+        #    print('problems closing the server process')
             #self.server_process.kill()
 
    # def run_server_process(self, host = '127.0.0.1', port = 33002):
