@@ -68,6 +68,8 @@ class Client():
                         #break
                     if '{MSG}' in temp_data:
                         print("broadcast msg: {}".format(temp_data))
+                    if '{MSG}cristina' in temp_data:
+                        print('the other msg: {}'.format(temp_data))
                     if '{MSG}' and '{CLIENTS}' in temp_data:
                         is_end_message = True
                         break

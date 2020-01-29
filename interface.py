@@ -1,5 +1,5 @@
 '''
-Chat Interface
+Chat Interface - handles the GUI
 
 01/23/2020
 cristina sewell
@@ -7,14 +7,16 @@ cristina sewell
 '''
 import sys
 import signal
+import os
 from enum import Enum
 from PyQt5.QtGui import QFont, QPalette, QColor, QBrush, QLinearGradient
-from PyQt5.QtCore import pyqtSignal, QRect, Qt
+from PyQt5.QtCore import pyqtSignal, QRect, Qt, QProcess
 from PyQt5.QtWidgets import (QApplication, QLineEdit, QPushButton,
                              QWidget, QGridLayout, QVBoxLayout, QLabel,
                              QComboBox, QScrollArea, QSizePolicy)
 import network
-
+#import serverdialog
+#import server
 # supporting the status loggin function 
 class Status(Enum):
     CRITICAL = 1
@@ -42,6 +44,7 @@ class MainWindow(QWidget):
     connect_signal = pyqtSignal(str)
     text_changed_signal = pyqtSignal(str, str)
     send_message_signal = pyqtSignal(str)
+    disconnect_signal = pyqtSignal(str)
 
     user_username = ""
     user_message = ""
@@ -51,9 +54,9 @@ class MainWindow(QWidget):
 
         min_width = 600
         min_height = 1200
-        self.title = "SLAC Chat"
+        title = "SLAC Chat"
         self.resize(min_width, min_height)
-        self.setWindowTitle(self.title)
+        self.setWindowTitle(title)
 
         self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         self.centralwidget = QWidget(self)
@@ -71,6 +74,9 @@ class MainWindow(QWidget):
 
         #create an instance of Network Module
         self.network = network.Network()
+        
+        #create a QProcess where the server will run
+        self.server_process = QProcess()
 
         # define attributes here to be part of the __init__
         self.scroll_area = QScrollArea(self.grid_layout_widget)
@@ -91,7 +97,7 @@ class MainWindow(QWidget):
     def setup_ui(self):
         self.setup_chat_area()
         self.setup_combobox()
-        self.setup_button()
+        self.setup_connect_button(False)
         self.setup_labels()
         self.setup_username_line_edit()
         self.setup_message_area()
@@ -160,23 +166,37 @@ class MainWindow(QWidget):
         #self.combo_box.addItem('username2')
 
     # push button that will allow the user to connect or disconnect
-    def setup_button(self):
-        self.connect_button.setText('Connect')
+    # state: 1 - connected; state:0 - not connected 
+    def setup_connect_button(self, state):
+        self.connect_button.setEnabled(False)
         self.connect_button.setFont(QFont('Courier New', 12))
         self.connect_button.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Preferred)
-        self.connect_button.setEnabled(False)
+        if state == 0: 
+        # user connected to the server
+            self.connect_button.setText('Connect')
+            self.connect_button.setStyleSheet("""
+                QWidget {
+                    border: 4px solid black;
+                    color: QColor(47, 36, 36);
+                    background-color: rgb(182, 177, 169);
+                    border-radius:10;
+                    min-width: 10em
+                    } 
+                """)
+            self.connect_signal.connect(self.network.handle_username_input)
 
-        self.connect_button.setStyleSheet("""
-            QWidget {
-                border: 4px solid black;
-                color: QColor(47, 36, 36);
-                background-color: rgb(182, 177, 169);
-                border-radius:10;
-                min-width: 10em
-                } 
-            """)
-
-        self.connect_signal.connect(self.network.handle_username_input)
+        elif state == 1:
+            self.connect_button.setText('Disconnect')
+            self.connect_button.setEnabled(True)
+            self.connect_button.setStyleSheet("""
+                QWidget {
+                    border: 4px solid black;
+                    color: rgb(47, 36, 36);
+                    background-color: rgb(0, 155, 118);
+                    border-radius:10
+                    } 
+                """)
+            self.disconnect_signal.connect(self.network.handle_usr_disconnect)
 
     def setup_username_line_edit(self):
         self.username_line_edit.setEnabled(True)
@@ -195,6 +215,7 @@ class MainWindow(QWidget):
             """)
 
         self.user_username = self.username_line_edit.text()
+        self.username_line_edit.returnPressed.connect(self.connect_clicked)
 
     def setup_labels(self):
         # username:
@@ -232,6 +253,7 @@ class MainWindow(QWidget):
             """)
         #self.message_line_edit.setWordWrap(True)
         print(self.message_line_edit.width())
+        self.message_line_edit.returnPressed.connect(self.send_button_clicked)
 
     # button to send a message
     def setup_send_button(self):
@@ -280,18 +302,21 @@ class MainWindow(QWidget):
         self.message_line_edit.textChanged.connect(self.check_message_text)
         self.send_button.clicked.connect(self.send_button_clicked)
         self.network.send_clients_signal.connect(self.update_combobox)
-            
+        self.network.send_clients_signal.connect(self.update_connect_btn)
+
     def connect_clicked(self):
-        self.connect_signal.emit(self.user_username)
-        self.connect_button.setText('Disconenct')
-        self.connect_button.setStyleSheet("""
-            QWidget {
-                border: 4px solid black;
-                color: rgb(47, 36, 36);
-                background-color: rgb(0, 155, 118);
-                border-radius:10
-                } 
-            """)
+        # this is not a very good practice here...
+        if self.connect_button.text() == "Connect":
+            self.log_status('connecting...', Status.INFO)
+            # we will send a signal so we can connect
+            self.connect_signal.emit(self.user_username)
+        elif self.connect_button.text() == "Disconnect":
+            # send a signal to disconnect
+            self.log_status('disconnecting...', Status.INFO)
+            self.disconnect_signal.emit(self.user_username)
+            self.update_connect_btn(False)
+        
+
     # do not allow the user to send any mesasges if no active users
     def send_button_clicked(self):
         if self.get_current_users() <= 0:
@@ -300,7 +325,8 @@ class MainWindow(QWidget):
             self.send_message_signal.emit(self.user_message)
             self.user_message = ""
             self.message_line_edit.clear()
-        
+        self.message_line_edit.clear()
+
     # gets the current users in the combo_box, this is usefull
     # when trying to see if there are any active users 
     def get_current_users(self):
@@ -340,6 +366,15 @@ class MainWindow(QWidget):
         self.combo_box.addItem('All')
         print('clients list: {}'.format(clients))
 
+    def update_connect_btn(self, is_connected):
+        if is_connected:
+            self.log_status("Connected", Status.INFO)
+            self.setup_connect_button(True)
+        elif not is_connected:
+            self.log_status("Not Connected", Status.WARNING)
+            self.setup_connect_button(False)
+            
+        
     # this signal handler can be implemented in place of the SIG_DFL
     # to allo for more control when application is closed using Ctrl+C
     #def sigint_handler(self, *args):
@@ -357,15 +392,27 @@ class MainWindow(QWidget):
         # close the client here
         self.network.handle_disconnect()
         # add more cleanup if necessary
+        try:
+            print('terminating server process')
+            self.server_process.waitForFinished()
+            self.server_process.terminate()
+        except:
+            print('problems closing the server process')
+            self.server_process.kill()
 
- # instatiating the MainWindow
+    def run_server_process(self, host = '127.0.0.1', port = 33002):
+        process  = "python server.py --host 127.0.0.1 --port 33002"
+        self.server_process.start(process)
+        self.server_process.waitForStarted()
+'''
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     APP = QApplication(sys.argv)
+    
     WINDOW = MainWindow()
     WINDOW.show()
-
+    WINDOW.run_server_process()
     APP.aboutToQuit.connect(WINDOW.exit_app_handler)
 
     sys.exit(APP.exec_())
-        
+'''
