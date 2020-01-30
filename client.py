@@ -13,65 +13,57 @@ class Client(QObject):
     PORT = 33002
     BUFSIZ = 2048
     ADDR = (HOST, PORT)
-    REGISTER = '{REGISTER}'
-    QUIT = '{QUIT}'
 
     data_received = ""
     clients = ""
     hello_msg = ""
 
-    CLIENT = socket(AF_INET, SOCK_STREAM)
-    
     recv_msg_signal = pyqtSignal(str)
-    
+    send_status_signal = pyqtSignal(str)
+
     def __init__(self):
         super().__init__()
-    
-   # start_thread_signal = pyqtSignal()
-        
+
+    CLIENT = socket(AF_INET, SOCK_STREAM)
+
     # move this to a separate thread
-    
     def recv_message(self):
         """Handles receiving messages"""
         while True:
             try:
                 message = self.CLIENT.recv(self.BUFSIZ).decode("utf-8")
-                # send a signal with this message - to be displayed
-                # later on, insert it into a list.
-              #  print('trying to receive message....')
                 self.recv_msg_signal.emit(message)
-               # print(message)
             except OSError:
-                print('client might have left the chat...')
+                print('Client probably left the chat')
+                self.send_status_signal.emit('The Client probably left the chat...')
                 # log an error here and display it to the chat
                 # send it using a signal? - CRITICAL
                 break
-            except self.CLIENT.timeout:
-                print('socket timeout')
-                break
-            except:
-                print('Some other type of error that i dont know')
-        
-    def send_username(self, username):
-        """Handles sending messages""" 
-        # .. get the message you want to send, from the ui put it into a variable
-        # .. after the message is saved, you should be clearing the message edit line
-        
-        # put this into a separate method and check if really connected
-        self.CLIENT.connect(self.ADDR)
-        self.CLIENT.send(bytes(username, "utf-8"))
-        
-        # check if successfully connected
 
-       #start the revc thread here, since we are expecting a
-       #message back from the server
+
+    def send_username(self, username):
+        """Handles starting the connection by registering the username"""
+        try:
+            self.CLIENT.connect(self.ADDR)
+            self.CLIENT.send(bytes(username, "utf-8"))
+        except ConnectionRefusedError:
+            print("Server Refused Connection. The server migth not be running..")
+            self.send_status_signal.emit('Server Refused Connection. The server migth not be running..')
+        except OSError:
+            print('No request allowed')
+        except:
+            print('Something went wrong when trying to conenct to the server')
+        #start the revc thread here, since we are expecting a
+        #message back from the server
         recv_thread = Thread(target=self.recv_message)
         recv_thread.start()
-        
-            
+
     def send_message_data(self, message):
-        self.CLIENT.send(bytes(message, "utf-8"))
-        
+        try:
+            self.CLIENT.send(bytes(message, "utf-8"))
+        except OSError:
+            print('Could not send the message')
+
     def exit_handler(self):
         """This funtion should do some cleanup before closing"""
         # send a message here that has "{quit}" in it

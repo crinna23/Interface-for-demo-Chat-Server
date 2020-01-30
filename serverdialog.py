@@ -1,5 +1,10 @@
 '''
-helper class for server process
+This is a QDialog box that is displayed when the main application is started
+It askes the users to provide the host and ip address of the server they
+want to connect to. It also provides the user with some default values
+
+01/29/2020
+cristina sewell
 '''
 
 import re
@@ -110,6 +115,9 @@ class ServerDialog(QDialog):
         return self.host_ip, int(self.port)
 
     def handle_checked_radiobtn(self):
+        """The radio button enables the user to use default
+           values to connect to the server if checke"""
+        print('radioButton checked: {}'.format(self.radio_button.isChecked()))
         if self.radio_button.isChecked():
             #dissable the input for host and port
             self.host_edit_line.setEnabled(False)
@@ -119,9 +127,12 @@ class ServerDialog(QDialog):
             self.button_box.button(QDialogButtonBox.Ok).setEnabled(False)
             self.host_edit_line.setEnabled(True)
             self.port_edit_line.setEnabled(True)
+        self.validate_ok_btn()
 
     def validate_host(self):
-        patrn = (r"^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$")
+        """To pass the validation, the user has to insert a valid ipV4 addres"""
+        patrn = (r"^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.)"
+                 "{3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$")
         ipv4_pattern = re.compile(patrn)
         isa_match = ipv4_pattern.match(self.host_edit_line.text())
 
@@ -166,7 +177,9 @@ class ServerDialog(QDialog):
         self.validate_ok_btn()
 
     def validate_ok_btn(self):
-        if self.is_host_valid and self.is_port_valid:
+        if self.radio_button.isChecked():
+            self.button_box.button(QDialogButtonBox.Ok).setEnabled(True)
+        elif self.is_host_valid and self.is_port_valid:
             self.button_box.button(QDialogButtonBox.Ok).setEnabled(True)
         else:
             self.button_box.button(QDialogButtonBox.Ok).setEnabled(False)
@@ -190,12 +203,11 @@ class ServerDialog(QDialog):
         gradient.setColorAt(0.0, Colors.stone)
         palette.setBrush(QPalette.Window, QBrush(gradient))
         self.setPalette(palette)
-'''
-if __name__ == "__main__":
-    import sys
-    from PyQt5.QtWidgets import QApplication
-    APP = QApplication(sys.argv)
-    WINDOW = ServerDialog()
-    WINDOW.show()
-    sys.exit(APP.exec_())
-'''
+
+#if __name__ == "__main__":
+#    import sys
+#    from PyQt5.QtWidgets import QApplication
+#    APP = QApplication(sys.argv)
+#    WINDOW = ServerDialog()
+#    WINDOW.show()
+#    sys.exit(APP.exec_())

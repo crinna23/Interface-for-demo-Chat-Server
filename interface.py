@@ -1,24 +1,19 @@
 '''
-Chat Interface - handles the GUI
+Chat Interface - handles the Main GUI Application
 
 01/23/2020
 cristina sewell
-
 '''
-import sys
 import signal
-import os
 from enum import Enum
 from PyQt5.QtGui import QFont, QPalette, QColor, QBrush, QLinearGradient
-from PyQt5.QtCore import pyqtSignal, QRect, Qt, QProcess, QThread
-from PyQt5.QtWidgets import (QApplication, QLineEdit, QPushButton,
+from PyQt5.QtCore import pyqtSignal, QRect, Qt
+from PyQt5.QtWidgets import (QLineEdit, QPushButton,
                              QWidget, QGridLayout, QVBoxLayout, QLabel,
                              QComboBox, QScrollArea, QSizePolicy)
 import network
-#import client
-#import serverdialog
-#import server
-# supporting the status loggin function 
+
+# supporting the status loggin function
 class Status(Enum):
     CRITICAL = 1
     WARNING = 2
@@ -40,16 +35,13 @@ class Colors():
     gold = QColor(178, 111, 22)
 
 class MainWindow(QWidget):
-    '''Setup the main window along with all the other attributes'''
+
     error_signal = pyqtSignal(str)
     connect_signal = pyqtSignal(str)
     text_changed_signal = pyqtSignal(str, str)
     send_message_signal = pyqtSignal(str, str)
     disconnect_signal = pyqtSignal()
     conn_settings_signal = pyqtSignal(str, int)
-
-    user_username = ""
-    user_message = ""
 
     def __init__(self):
         super().__init__()
@@ -76,13 +68,7 @@ class MainWindow(QWidget):
 
         #create an instance of Network Module
         self.network = network.Network()
-       # self.client = client.Client() 
-        
-        #create a QProcess where the server will run
-        #self.server_process = QProcess()
-        #self.server_process.setProcessChannelMode(QProcess.MergedChannels)
 
-        # define attributes here to be part of the __init__
         self.scroll_area = QScrollArea(self.grid_layout_widget)
         self.combo_box = QComboBox(self.grid_layout_widget)
         self.connect_button = QPushButton(self.grid_layout_widget)
@@ -98,12 +84,11 @@ class MainWindow(QWidget):
         self.setup_signal_slots()
 
     def set_connection_settings(self, addr, port):
-        print('port {}'.format(port))
-        print('addr {}'.format(addr))
+        """Setting the HOST Address and the PORT for connection with the server"""
         self.conn_settings_signal.emit(addr, port)
-        
-    #setup multiple components of the app ui
+
     def setup_ui(self):
+        """Setup multiple components of the ui by calling their setup functions"""
         self.setup_chat_area()
         self.setup_combobox()
         self.setup_connect_button(False)
@@ -114,9 +99,8 @@ class MainWindow(QWidget):
         self.setup_layout()
         self.log_status('Please provide a username to connect.', Status.INFO)
 
-    # defines the main area where the messages
-    # will be exchanged or displayed
     def setup_chat_area(self):
+        """Defines the main area where the messages will be displayed"""
         self.scroll_area.setContentsMargins(2, 40, 2, 2)
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
@@ -136,14 +120,13 @@ class MainWindow(QWidget):
         palette.setBrush(QPalette.Window, QBrush(gradient))
         self.scroll_area.setPalette(palette)
 
-        self.widget = QWidget()
-        self.scroll_area.setWidget(self.widget)
-        self.scroll_area_layout = QVBoxLayout(self.widget)
+        widget = QWidget()
+        self.scroll_area.setWidget(widget)
+        self.scroll_area_layout = QVBoxLayout(widget)
         self.scroll_area_layout.setAlignment(Qt.AlignTop)
 
-    # combo box that holds the list of
-    # clients that are currently participating in the chat
     def setup_combobox(self):
+        """Combo box that holds the list of currently active clients"""
         self.combo_box.setFont(QFont('Courier New', 12))
         self.combo_box.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Preferred)
 
@@ -155,16 +138,14 @@ class MainWindow(QWidget):
                 border-radius:7
                 } 
             """)
-        #self.combo_box.addItem('username1')
-        #self.combo_box.addItem('ALL-Broadcast')
 
-    # push button that will allow the user to connect or disconnect
-    # state: 1 - connected; state:0 - not connected 
     def setup_connect_button(self, state):
+        """Push button that will allow the user to connect or disconnect
+           state: 1 - connected; state:0 - not connected"""
         self.connect_button.setEnabled(False)
         self.connect_button.setFont(QFont('Courier New', 12))
         self.connect_button.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Preferred)
-        if state == 0: 
+        if state == 0:
         # user connected to the server
             self.connect_button.setText('Connect')
             self.connect_button.setStyleSheet("""
@@ -207,7 +188,6 @@ class MainWindow(QWidget):
                 } 
             """)
 
-        self.user_username = self.username_line_edit.text()
         self.username_line_edit.returnPressed.connect(self.connect_clicked)
 
     def setup_labels(self):
@@ -228,8 +208,8 @@ class MainWindow(QWidget):
 
         self.status_label.setStyleSheet(""" QLabel { color: white }""")
 
-    # the area where the user will write a text
     def setup_message_area(self):
+        """The area where the user will write a message to be sent"""
         self.message_line_edit.setObjectName("MessageLineEdit")
         self.message_line_edit.setEnabled(True)
         self.message_line_edit.setPlaceholderText("....")
@@ -244,11 +224,10 @@ class MainWindow(QWidget):
                 border-radius:10;
                 } 
             """)
-        print(self.message_line_edit.width())
         self.message_line_edit.returnPressed.connect(self.send_button_clicked)
 
-    # button to send a message
     def setup_send_button(self):
+        """Button to send a message"""
         self.send_button.setEnabled(True)
         self.send_button.setText("Send")
         self.send_button.setFont(QFont('Courier New', 12))
@@ -266,8 +245,8 @@ class MainWindow(QWidget):
         self.send_message_signal.connect(self.network.handle_message_input)
         self.conn_settings_signal.connect(self.network.connection_settings)
 
-    # arrange and add the components on the grid_layout
     def setup_layout(self):
+        """Organizes and adds the components of the grid layout"""
         self.grid_layout.setHorizontalSpacing(24)
         self.grid_layout.setContentsMargins(7, 7, 7, 7, )
         self.grid_layout.setVerticalSpacing(7)
@@ -292,38 +271,43 @@ class MainWindow(QWidget):
     def setup_signal_slots(self):
         self.connect_button.clicked.connect(self.connect_clicked)
         self.username_line_edit.textChanged.connect(self.check_username_text)
-        self.message_line_edit.textChanged.connect(self.check_message_text)
         self.send_button.clicked.connect(self.send_button_clicked)
         self.network.send_clients_signal.connect(self.update_combobox)
         self.network.send_connected_signal.connect(self.update_connect_btn)
         self.network.display_msg_signal.connect(self.display_message)
-       
+        self.network.send_log_signal.connect(self.log_status)
+        self.network.send_disconnected.connect(self.update_quit_status)
+
+    def update_quit_status(self):
+        self.update_connect_btn(False)
+        self.log_status('You have disconnected...', Status.WARNING)
+
     def display_message(self, message):
         msg_label = QLabel(message)
         msg_label.setFont(QFont('Courier New', 12))
         msg_label.setWordWrap(True)
-        msg_label.setStyleSheet(""" 
+        msg_label.setStyleSheet("""
             QLabel{ 
                 border: 2px solid black;
                 background-color: rgba(0, 155, 118, 50)
                 }
             """)
-        # this needs some fixing, the scroll bar is still not going all the way to the end
+        # this needs some fixing, the scroll bar is still not going all the way to the bottom
         self.scroll_area_layout.addWidget(msg_label)
         self.scroll_area.verticalScrollBar().setValue(self.scroll_area.verticalScrollBar().maximum())
-       
+
     def connect_clicked(self):
         # this is not a very good practice here...
         if self.connect_button.text() == "Connect":
             self.log_status('connecting...', Status.INFO)
             # we will send a signal so we can connect
-            self.connect_signal.emit(self.user_username)
+            self.connect_signal.emit(self.username_line_edit.text())
         elif self.connect_button.text() == "Disconnect":
             # send a signal to disconnect
             self.log_status('disconnecting...', Status.INFO)
             self.disconnect_signal.emit()
             self.update_connect_btn(False)
-        
+
 
     # do not allow the user to send any mesasges if no active users
     def send_button_clicked(self):
@@ -331,48 +315,42 @@ class MainWindow(QWidget):
             self.log_status('You must connect before you can send a message!', Status.WARNING)
         else:
             recipient = str(self.combo_box.currentText())
-            self.send_message_signal.emit(self.user_message, recipient)
-            self.user_message = ""
+            self.send_message_signal.emit(self.message_line_edit.text(), recipient)
             self.message_line_edit.clear()
         self.message_line_edit.clear()
 
     # gets the current users in the combo_box, this is usefull
-    # when trying to see if there are any active users 
+    # when trying to see if there are any active users
     def get_current_users(self):
         return self.combo_box.count()
-        
+
     # takes a string message that represents the current status of some components
-    
     def log_status(self, msg, status):
         self.status_label.setText(msg)
         self.status_label.setWordWrap(True)
-        
-        if status == Status.CRITICAL:          
+
+        if status == Status.CRITICAL:
             self.status_label.setStyleSheet("""QLabel {color: rgb(177, 4, 14)}""")
         elif status == Status.WARNING:
             self.status_label.setStyleSheet("""QLabel {color: rgb(178, 111, 22)}""")
         elif status == Status.INFO:
             self.status_label.setStyleSheet("""QLabel {color: rgb(0, 124, 146)}""")
-        
-    # enables/dissables the 'connect' button and updates the 'user_inpu' with current info
+        else:
+            self.status_label.setStyleSheet("""QLabel {color: rgb(177, 4, 14)}""")
+
+    # enables/dissables the 'connect' button and updates the 'user_input' with current info
     def check_username_text(self):
         self.connect_button.setEnabled(True)
-        if self.user_username != self.username_line_edit.text():
-            self.user_username = self.username_line_edit.text()
        # dissable the 'connect' button if no imput in username edit line
         if self.username_line_edit.text() == "":
             self.connect_button.setEnabled(False)
-
-    def check_message_text(self):
-        if self.user_message != self.message_line_edit.text():
-            self.user_message = self.message_line_edit.text()
 
     def update_combobox(self, str_clients):
         """Clear the combo box every time the server sends a list
            of clients, this way we have the latest updated list and no duplicates"""
         self.combo_box.clear()
-        
-        clients = str_clients.split('|')  
+
+        clients = str_clients.split('|')
         for i in clients:
             self.combo_box.addItem(i)
         self.combo_box.addItem('ALL-Broadcast')
@@ -384,62 +362,23 @@ class MainWindow(QWidget):
         elif not is_connected:
             self.log_status("Not Connected", Status.WARNING)
             self.setup_connect_button(False)
-    
-  #  def handle_recv_thread(self):
-    #Move recv_message into a separate thread, 
-    #so it does not block us from doing other stuff while waiting for messages
-    #create the main thread client = Client()           
-    ##client = Client()
-    #    print('in the thread function')
-        # create a thread
-    #    recv_thread = QThread()
-        # now client owned by recv_thread:
-    #    self.client.moveToThread(recv_thread)
-    #    recv_thread.started.connect(self.client.recv_message)
-    #    recv_thread.start()
-     
-        
-    # this signal handler can be implemented in place of the SIG_DFL
-    # to allo for more control when application is closed using Ctrl+C
-    #def sigint_handler(self, *args):
-    #    sys.stderr.write('\r')
-    #    if(QMessageBox.question(None, '', "Are you sure you want to quit?",
-    #                            QMessageBox.Yes | QMessageBox.No,
-    #                            QMessageBox.Yes) == QMessageBox.Yes):
-    #        QMessageBox.setWindowFlags(Qt.WindowStaysOnTopHint)
-    #        QApplication.quit()
+            self.username_line_edit.clear()
 
-    # handle anything you have to hanle
-    # before the application closes
     def exit_app_handler(self):
-        print('I am about to exit')
-        # close the client here
-        self.network.handle_disconnect()
+        """Handle here anything you have to handle before closing the main application"""
         # add more cleanup if necessary
-       # try:
-       #     print('terminating server process')
-            #self.server_process.waitForFinished()
-            #self.server_process.terminate()
-       # except:
-        #    print('problems closing the server process')
-            #self.server_process.kill()
+        self.network.handle_disconnect()
 
-   # def run_server_process(self, host = '127.0.0.1', port = 33002):
-    #    process  = "python server.py --host 127.0.0.1 --port 33002"
-     #   self.server_process.start(process)
-      #  self.server_process.waitForStarted()
-        
-       # process_stdout = str(self.server_process.readAll())
-       # print(process_stdout)
-'''
-if __name__ == "__main__":
-    signal.signal(signal.SIGINT, signal.SIG_DFL)
-    APP = QApplication(sys.argv)
-    
-    WINDOW = MainWindow()
-    WINDOW.show()
-    WINDOW.run_server_process()
-    APP.aboutToQuit.connect(WINDOW.exit_app_handler)
-
-    sys.exit(APP.exec_())
-'''
+#if __name__ == "__main__":
+#    import sys
+#    import signal
+#    from PyQt5.QtWidgets import QApplication
+#    signal.signal(signal.SIGINT, signal.SIG_DFL)
+#    APP = QApplication(sys.argv)
+#
+#    WINDOW = MainWindow()
+#    WINDOW.show()
+#    WINDOW.run_server_process()
+#    APP.aboutToQuit.connect(WINDOW.exit_app_handler)
+#
+#    sys.exit(APP.exec_())
