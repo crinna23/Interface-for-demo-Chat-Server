@@ -6,84 +6,101 @@ the Gui interface and the Client
 01/23/2020
 cristina sewell
 '''
-from PyQt5.QtCore import pyqtSignal, pyqtSlot, QThread
+from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QWidget
-#from client import send_username, recv_message, send_data
-#import server
 import client
 
 class Network(QWidget):
+    #signals 
     send_clients_signal = pyqtSignal(str)
     send_connected_signal = pyqtSignal(bool)
-    display_msg_signal = pyqtSignal(str)
-
+    display_msg_signal = pyqtSignal(str)  
+    
     def __init__(self):
         super().__init__()
+
         self.client = client.Client()
-         
+
+        # slots & signal connections
         self.client.recv_msg_signal.connect(self.handle_msg_revc)
     
     def connection_settings(self, host, port):
+        """This is a slot that captures the user info about host/port"""
         self.client.HOST = host
         self.client.PORT = port
-
-        
-       # client_socket = server.find_client_socket('cristina')
-       # print('find client socket from server: {}'.format(client_socket))
+   
     def handle_username_input(self, username):
-        print('before connect_to_server')
+        """Initiates the communication with the server by providing
+        a username for registration"""
         #server_response = self.client.connect_to_server(username)
-        #if server_response:
-        #    # send something here to show that it is connected
-        #    self.send_connected_signal.emit(True)
-        #    print('data: {}'.format(server_response))
-        #    self.handle_combobox_selection()
         register_msg = "{REGISTER}" + username
         self.client.send_username(register_msg)
-        #self.hanle_recv_thread()
-        #self.handle_msg_revc()
-        
-    def handle_msg_revc(self, message):
-        """Slot to catch the recv_msg_signal from client"""        
-        # send it to the display....
-        #msg_list = [i for i in message.split("}"))
-        #msg = message.split('{')[1]
-        clients = message.split('{CLIENTS}')
-        print(clients)
-      
-       # print('in network: {}'.format(msg_list))
-        #for i in range msg_list
-        self.display_msg_signal.emit(message)
-                 
-    def handle_combobox_selection(self):
-        clients = self.client.get_clients()
-        print('Can i print the clients here? {}'.format(clients))
-        send_clients_signal.emit(clients)
-
-    def handle_message_input(self, message, username):
-        if 'ALL-Broadcast' in username:
+     
+    def handle_message_input(self, message, recipient):
+        #if 'Quit' or 'QUIT' or 'quit' in message:
+            #temp_m = '{QUIT}'
+        #    self.client.CLIENT.close()
+        if 'ALL-Broadcast' in recipient:
             all_users = 'ALL'
             temp_m = '{%s}'%(all_users) + message 
         else:
-            temp_m = '{%s}'%(username) + message 
-       # temp_m = temp_m.encode('utf-8')
-        self.client.send_data(temp_m)
-        
+            temp_m = '{%s}'%(recipient) + message 
+        self.client.send_message_data(temp_m)
 
-    def handle_connect(self, username):
-        print("I am in Network, I have received the connect signal: {}".format(username))
-        # pack the message here in the right format
-        # send it to
+    def handle_msg_revc(self, message):
+        """Slot to catch the messages received from the client.
+           Processes the messages and sends info for display"""     
+        # process clients
+        self.process_clients(message)
+        # process messages
+        self.process_message(message)
         
+    def process_clients(self, message):
+        #send a signal to the combo_box to populate the clients
+        if '{CLIENTS}' in message:
+            clients = str(message.split('{CLIENTS}')[-1])
+            self.send_clients_signal.emit(clients)
+            
+            #if we recieved a clients list from the server and it is not empty
+            #it is a good indication we are connected to the server
+            #send a signal to indicate that we are connected - i don't like doing it here though
+            self.send_connected_signal.emit(True)
+            
+    def process_message(self, message):
+        #if '{QUIT}' in message:
+         #   self.client.CLIENT.close()
+        if '{MSG}' and ':' in message:
+            # take the {MSG} out, this is a broadcast message from a user
+            msg = str(message.split('{MSG}')[-1])
+            if msg != "":
+                self.display_msg_signal.emit(msg)
+        elif ':' in message:
+            #just display it the way it is, this is coming from an active user, not from the server
+            self.display_msg_signal.emit(message)
+        elif '{MSG}' and '{CLIENTS}' in message:
+            # get only what i in the middle of them
+            msg = message.split('{MSG}')[-1].split('{CLIENTS}')[0] 
+            if msg != "":
+                print('this is the inner split: {}'.format(msg))
+                self.display_msg_signal.emit(msg)
+        elif '{MSG}' and not '{CLIENTS}' in message:
+            msg = str(message.split('{MSG}')[-1])
+            #send a signal to the scroll_are to populate the message
+            if msg != "":
+                self.display_msg_signal.emit(msg)
+
     def handle_usr_disconnect(self):
-        temp_message = '{QUIT}'.encode("utf-8")
-        #self.client.send_dataaa(temp_message)
-        client.CLIENT.send(temp_message)
-       #r = self.client.send_data(temp_message)
-        #print('in closing {} '.format(r))
-        #self.client.close()
+        quit_message = '{QUIT}'
+        print('in handle_usr_disconnect')
+        self.client.send_message_data(quit_message)
+        #stop the recv_thread here....??
+       # self.client.send_message_data(quit_message)
+        self.client.CLIENT.close()
         
     def handle_disconnect(self):
-        client.close()
+        pass
+        # stop the recv_thread here....??
+        # instead of directly closing it, send a message?
+       # self.client.CLIENT.close()
         
 

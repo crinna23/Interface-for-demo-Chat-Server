@@ -69,7 +69,7 @@ def main(argv):
     main_window = interface.MainWindow()
     main_window.set_connection_settings(host, port)
     main_window.show()
-   # app.aboutToQuit.connect(exit_app_handler)
+    #app.aboutToQuit.connect(main_window.exit_app_handler)
 
     sys.exit(app.exec_())
     

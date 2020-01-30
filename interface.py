@@ -45,7 +45,7 @@ class MainWindow(QWidget):
     connect_signal = pyqtSignal(str)
     text_changed_signal = pyqtSignal(str, str)
     send_message_signal = pyqtSignal(str, str)
-    disconnect_signal = pyqtSignal(str)
+    disconnect_signal = pyqtSignal()
     conn_settings_signal = pyqtSignal(str, int)
 
     user_username = ""
@@ -117,7 +117,7 @@ class MainWindow(QWidget):
     # defines the main area where the messages
     # will be exchanged or displayed
     def setup_chat_area(self):
-        self.scroll_area.setContentsMargins(2, 2, 2, 2)
+        self.scroll_area.setContentsMargins(2, 40, 2, 2)
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
@@ -136,26 +136,10 @@ class MainWindow(QWidget):
         palette.setBrush(QPalette.Window, QBrush(gradient))
         self.scroll_area.setPalette(palette)
 
-        self.scroll_area.setFont(QFont('Courier New', 12))
-
         self.widget = QWidget()
         self.scroll_area.setWidget(self.widget)
         self.scroll_area_layout = QVBoxLayout(self.widget)
         self.scroll_area_layout.setAlignment(Qt.AlignTop)
-
-        self.scroll_area.setWidgetResizable(True)
-
-        self.scroll_area.verticalScrollBar().setSingleStep(20)
-
-        for i in range(40):
-            i = QLabel('start----------------------------------------------------------end')
-            i.setStyleSheet(""" QLabel { background-color: rgba(0, 23, 43, 80)}""")
-            i.setFixedHeight(60)
-           # i.adjustSize()
-           # i.setMinimumWidth(1)
-            i.wordWrap()
-           # l = scroll_area_layout.layout()
-           # l.insertWidget(l.count() - 1, i)
 
     # combo box that holds the list of
     # clients that are currently participating in the chat
@@ -172,7 +156,7 @@ class MainWindow(QWidget):
                 } 
             """)
         #self.combo_box.addItem('username1')
-        self.combo_box.addItem('ALL-Broadcast')
+        #self.combo_box.addItem('ALL-Broadcast')
 
     # push button that will allow the user to connect or disconnect
     # state: 1 - connected; state:0 - not connected 
@@ -260,7 +244,6 @@ class MainWindow(QWidget):
                 border-radius:10;
                 } 
             """)
-        #self.message_line_edit.setWordWrap(True)
         print(self.message_line_edit.width())
         self.message_line_edit.returnPressed.connect(self.send_button_clicked)
 
@@ -312,18 +295,23 @@ class MainWindow(QWidget):
         self.message_line_edit.textChanged.connect(self.check_message_text)
         self.send_button.clicked.connect(self.send_button_clicked)
         self.network.send_clients_signal.connect(self.update_combobox)
-        self.network.send_clients_signal.connect(self.update_connect_btn)
+        self.network.send_connected_signal.connect(self.update_connect_btn)
         self.network.display_msg_signal.connect(self.display_message)
-       # self.client.start_thread_signal.connect(self.handle_recv_thread)
        
     def display_message(self, message):
-        self.scroll_area_layout.insertWidget(0, QLabel(message))
-      #  l = self.scroll_area.layout()
-       # l.insertWidget(0, QLabel(message))
-        
-           # l.insertWidget(l.count() - 1, i)
-       # self.scroll_area.addWidget(QLabel(message))
-
+        msg_label = QLabel(message)
+        msg_label.setFont(QFont('Courier New', 12))
+        msg_label.setWordWrap(True)
+        msg_label.setStyleSheet(""" 
+            QLabel{ 
+                border: 2px solid black;
+                background-color: rgba(0, 155, 118, 50)
+                }
+            """)
+        # this needs some fixing, the scroll bar is still not going all the way to the end
+        self.scroll_area_layout.addWidget(msg_label)
+        self.scroll_area.verticalScrollBar().setValue(self.scroll_area.verticalScrollBar().maximum())
+       
     def connect_clicked(self):
         # this is not a very good practice here...
         if self.connect_button.text() == "Connect":
@@ -333,17 +321,17 @@ class MainWindow(QWidget):
         elif self.connect_button.text() == "Disconnect":
             # send a signal to disconnect
             self.log_status('disconnecting...', Status.INFO)
-            self.disconnect_signal.emit(self.user_username)
+            self.disconnect_signal.emit()
             self.update_connect_btn(False)
         
 
     # do not allow the user to send any mesasges if no active users
     def send_button_clicked(self):
         if self.get_current_users() <= 0:
-            self.log_status('There are no active users, you cannot send a message!', Status.WARNING)
+            self.log_status('You must connect before you can send a message!', Status.WARNING)
         else:
-            current_user = str(self.combo_box.currentText())
-            self.send_message_signal.emit(self.user_message, current_user)
+            recipient = str(self.combo_box.currentText())
+            self.send_message_signal.emit(self.user_message, recipient)
             self.user_message = ""
             self.message_line_edit.clear()
         self.message_line_edit.clear()
@@ -378,14 +366,16 @@ class MainWindow(QWidget):
     def check_message_text(self):
         if self.user_message != self.message_line_edit.text():
             self.user_message = self.message_line_edit.text()
-        print(self.user_message)
 
     def update_combobox(self, str_clients):
-        #self.network.handle_combobox_selection()
-        clients = list(str_clients.split('|'))
-        self.combo_box.addItems(clients)
-        self.combo_box.addItem('All')
-        print('clients list: {}'.format(clients))
+        """Clear the combo box every time the server sends a list
+           of clients, this way we have the latest updated list and no duplicates"""
+        self.combo_box.clear()
+        
+        clients = str_clients.split('|')  
+        for i in clients:
+            self.combo_box.addItem(i)
+        self.combo_box.addItem('ALL-Broadcast')
 
     def update_connect_btn(self, is_connected):
         if is_connected:
